@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NFA to DFA Conversion Engine · Formal Languages</title>
+<style>
+:root {
+  --bg-app: #f8fafc;
+  --panel-card: #ffffff;
+  --ink-primary: #0f172a;
+  --ink-secondary: #475569;
+  --border-line: #e2e8f0;
+  --accent-cyan: #0284c7;
+  --accent-blue: #2563eb;
+  --accent-emerald: #059669;
+  --subtle-blue: #eff6ff;
+  --subtle-cyan: #f0f9ff;
+  --subtle-emerald: #ecfdf5;
+  --shadow-box: 0 4px 16px -2px rgba(15, 23, 42, 0.06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-app: #090d16;
+    --panel-card: #111827;
+    --ink-primary: #f8fafc;
+    --ink-secondary: #94a3b8;
+    --border-line: #1e293b;
+    --accent-cyan: #38bdf8;
+    --accent-blue: #3b82f6;
+    --accent-emerald: #10b981;
+    --subtle-blue: #172554;
+    --subtle-cyan: #082f49;
+    --subtle-emerald: #064e3b;
+    --shadow-box: none;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg-app); color: var(--ink-primary); font: 15px/1.6 system-ui,-apple-system,sans-serif; }
+.hero-header { background: #0b1329; color: #fff; padding: 48px 24px 64px; border-bottom: 3px solid var(--accent-blue); }
+.hero-content { max-width: 1120px; margin: 0 auto; }
+.badge-course { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 3px 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
+.hero-header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+.hero-header p { margin: 0; color: #94a3b8; font-size: 15px; }
+.page-container { max-width: 1120px; margin: -32px auto 60px; padding: 0 20px; }
+.card-section { background: var(--panel-card); border: 1px solid var(--border-line); border-radius: 14px; box-shadow: var(--shadow-box); padding: 26px; margin-bottom: 28px; }
+.card-section h2 { margin: 0 0 16px; font-size: 20px; }
+.summary-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.pill-stat { background: var(--bg-app); border: 1px solid var(--border-line); border-radius: 8px; padding: 5px 12px; font-size: 13px; color: var(--ink-secondary); }
+.pill-stat b { color: var(--ink-primary); margin-left: 4px; }
+.diagram-frame { overflow-x: auto; border: 1px solid var(--border-line); border-radius: 12px; padding: 14px; background: var(--bg-app); }
+svg { display: block; margin: 0 auto; }
+
+/* SVG Styles */
+.trazo-arista { fill: none; stroke: var(--ink-secondary); stroke-width: 1.8; }
+.puntero-arista { fill: var(--ink-secondary); }
+.linea-inicio { stroke: var(--accent-blue); stroke-width: 2.4; }
+.puntero-inicio { fill: var(--accent-blue); }
+.texto-etiqueta { font: 700 13px ui-monospace,monospace; fill: var(--accent-blue); text-anchor: middle; dominant-baseline: central; stroke: var(--panel-card); stroke-width: 4; paint-order: stroke; stroke-linejoin: round; }
+.fondo-pildora { fill: var(--panel-card); stroke: var(--accent-blue); stroke-width: 2; transition: all 0.2s ease; }
+.nodo-es-inicio .fondo-pildora { fill: var(--subtle-cyan); stroke: var(--accent-cyan); }
+.borde-aceptacion { fill: none; stroke: var(--accent-emerald); stroke-width: 2; }
+.nodo-es-final .fondo-pildora { stroke: var(--accent-emerald); }
+.nodo-es-final .borde-aceptacion { fill: var(--subtle-emerald); }
+.nodo-es-trampa .fondo-pildora { stroke: var(--ink-secondary); stroke-dasharray: 4 4; }
+.texto-nodo { font: 600 13px ui-monospace,monospace; fill: var(--ink-primary); text-anchor: middle; dominant-baseline: central; }
+.nodo-resaltado .fondo-pildora { stroke: #f59e0b !important; stroke-width: 3.5px !important; fill: #fef3c7 !important; }
+@media (prefers-color-scheme: dark) {
+  .nodo-resaltado .fondo-pildora { stroke: #fbbf24 !important; stroke-width: 3.5px !important; fill: #451a03 !important; }
+}
+
+/* Legend */
+.legend-panel { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; font-size: 13px; color: var(--ink-secondary); }
+.lg-item { display: flex; align-items: center; gap: 6px; }
+.circle-mark { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.c-start { background: var(--accent-cyan); }
+.c-final { background: var(--accent-emerald); }
+.c-trap { background: var(--ink-secondary); }
+
+/* Tables */
+.table-box { overflow-x: auto; border: 1px solid var(--border-line); border-radius: 10px; margin-top: 12px; }
+table.matriz { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
+table.matriz th, table.matriz td { padding: 10px 14px; border-bottom: 1px solid var(--border-line); }
+table.matriz th { background: var(--bg-app); color: var(--ink-secondary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+table.matriz tr:last-child td { border-bottom: none; }
+table.matriz tbody tr:hover { background: var(--subtle-blue); }
+td.w-fit { width: 1%; white-space: nowrap; }
+.cell-mono { font-family: ui-monospace,monospace; }
+.cell-empty { color: var(--ink-secondary); opacity: 0.6; }
+.tag { display: inline-block; border-radius: 6px; padding: 2px 7px; margin-right: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.tag-start { background: var(--subtle-cyan); color: var(--accent-cyan); }
+.tag-final { background: var(--subtle-emerald); color: var(--accent-emerald); }
+
+/* Interactive Simulator */
+.simulator-panel { background: var(--bg-app); border: 1px solid var(--border-line); border-radius: 12px; padding: 16px; margin: 20px 0 10px; }
+.sim-controls { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.sim-textbox { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border-line); background: var(--panel-card); color: var(--ink-primary); font-family: ui-monospace,monospace; font-size: 14px; min-width: 280px; outline: none; }
+.sim-textbox:focus { border-color: var(--accent-blue); }
+.btn-run { padding: 9px 18px; background: var(--accent-blue); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.btn-run:hover { opacity: 0.9; }
+.btn-reset { padding: 9px 14px; background: transparent; color: var(--ink-secondary); border: 1px solid var(--border-line); border-radius: 8px; font-weight: 600; cursor: pointer; }
+.sim-display { margin-top: 12px; font-size: 13px; }
+.verdict-pass { background: #dcfce7; color: #15803d; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
+.verdict-fail { background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
+@media (prefers-color-scheme: dark) {
+  .verdict-pass { background: #064e3b; color: #6ee7b7; }
+  .verdict-fail { background: #450a0a; color: #fca5a5; }
+}
+footer { text-align: center; color: var(--ink-secondary); font-size: 13px; padding: 10px 0 40px; }
+</style>
+</head>
+<body>
+<header class="hero-header">
+  <div class="hero-content">
+    <div class="badge-course">SI2002 Formal Languages · Assignment 2 · EAFIT</div>
+    <h1>NFA to DFA Subset Construction System</h1>
+    <p>Algorithmic determinization based on Dexter Kozen (1997) · 1 case processed</p>
+  </div>
+</header>
+<main class="page-container">
+<section class="card-section">
+<h2>Case 1</h2>
+<div class="summary-bar"><div class="pill-stat">NFA States: <b>5</b></div><div class="pill-stat">Alphabet: <b>a b</b></div><div class="pill-stat">DFA States: <b>7</b></div><div class="pill-stat">Accepting States: <b>4</b></div><div class="pill-stat">Initial State: <b>{3 5}</b></div></div>
+
+<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--ink-secondary);margin:16px 0 8px;">DFA State Diagram</div>
+<div class="diagram-frame"><svg id="grafo-afd-1" xmlns="http://www.w3.org/2000/svg" width="764" height="580" viewBox="0 0 764 580" role="img"><defs><marker id="mk-flecha-1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 9 5 L 0 9 z" class="puntero-arista"/></marker><marker id="mk-init-1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><polygon points="0,1 9,5 0,9" class="puntero-inicio"/></marker></defs><path d="M 147.0 290.0 C 203.2 290.0, 215.8 237.5, 272.0 237.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="199.5" y="257.9" class="texto-etiqueta">a</text><path d="M 147.0 290.0 C 211.7 290.0, 226.1 342.5, 290.8 342.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="207.4" y="302.1" class="texto-etiqueta">b</text><path d="M 381.5 237.5 C 437.8 237.5, 450.2 132.5, 506.5 132.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="434.0" y="183.4" class="texto-etiqueta">a</text><path d="M 381.5 237.5 C 437.8 237.5, 450.2 237.5, 506.5 237.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="434.0" y="227.5" class="texto-etiqueta">b</text><path d="M 362.8 342.5 C 427.4 342.5, 441.8 342.5, 506.5 342.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="423.1" y="332.5" class="texto-etiqueta">a</text><path d="M 362.8 342.5 C 427.4 342.5, 441.8 447.5, 506.5 447.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="423.1" y="376.6" class="texto-etiqueta">b</text><path d="M 527.5 113.5 A 18 18 0 1 1 557.5 113.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="542.5" y="78.5" class="texto-etiqueta">a</text><path d="M 506.5 132.5 C 434.6 132.5, 434.6 342.5, 362.8 342.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="422.6" y="227.5" class="texto-etiqueta">b</text><path d="M 578.5 237.5 C 637.5 237.5, 637.5 132.5, 578.5 132.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="631.8" y="185.0" class="texto-etiqueta">a</text><path d="M 527.5 218.5 A 18 18 0 1 1 557.5 218.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="542.5" y="183.5" class="texto-etiqueta">b</text><path d="M 527.5 323.5 A 18 18 0 1 1 557.5 323.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="542.5" y="288.5" class="texto-etiqueta">a,b</text><path d="M 578.5 447.5 C 685.5 447.5, 685.5 132.5, 578.5 132.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="667.8" y="290.0" class="texto-etiqueta">a</text><path d="M 542.5 466.5 Q 434.6 508.5 326.8 361.5" class="trazo-arista" marker-end="url(#mk-flecha-1)"/><text x="434.6" y="472.2" class="texto-etiqueta">b</text><line x1="31.0" y1="290.0" x2="73.0" y2="290.0" class="linea-inicio" marker-end="url(#mk-init-1)"/><g class="nodo-afd nodo-es-inicio" data-state="{3 5}"><rect x="75.0" y="271.0" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><text x="111.0" y="290.0" class="texto-nodo">{3 5}</text></g><g class="nodo-afd nodo-es-final" data-state="{1 2 4 5}"><rect x="272.0" y="218.5" width="109.5" height="38.0" rx="19.0" class="fondo-pildora"/><rect x="275.5" y="222.0" width="102.5" height="31.0" rx="15.5" class="borde-aceptacion"/><text x="326.8" y="237.5" class="texto-nodo">{1 2 4 5}</text></g><g class="nodo-afd nodo-es-final" data-state="{4}"><rect x="290.8" y="323.5" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><rect x="294.2" y="327.0" width="65.0" height="31.0" rx="15.5" class="borde-aceptacion"/><text x="326.8" y="342.5" class="texto-nodo">{4}</text></g><g class="nodo-afd nodo-es-final" data-state="{1 5}"><rect x="506.5" y="113.5" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><rect x="510.0" y="117.0" width="65.0" height="31.0" rx="15.5" class="borde-aceptacion"/><text x="542.5" y="132.5" class="texto-nodo">{1 5}</text></g><g class="nodo-afd nodo-es-final" data-state="{4 5}"><rect x="506.5" y="218.5" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><rect x="510.0" y="222.0" width="65.0" height="31.0" rx="15.5" class="borde-aceptacion"/><text x="542.5" y="237.5" class="texto-nodo">{4 5}</text></g><g class="nodo-afd nodo-es-trampa" data-state="∅"><rect x="506.5" y="323.5" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><text x="542.5" y="342.5" class="texto-nodo">∅</text></g><g class="nodo-afd" data-state="{5}"><rect x="506.5" y="428.5" width="72.0" height="38.0" rx="19.0" class="fondo-pildora"/><text x="542.5" y="447.5" class="texto-nodo">{5}</text></g></svg></div>
+<div class="legend-panel">
+  <div class="lg-item"><span class="circle-mark c-start"></span> Initial state (entry arrow)</div>
+  <div class="lg-item"><span class="circle-mark c-final"></span> Double border = Accepting state</div>
+  <div class="lg-item"><span class="circle-mark c-trap"></span> Dashed = Trap/Empty state ∅ (0 in console)</div>
+</div>
+
+<div class="simulator-panel">
+  <strong>Interactive String Simulator:</strong> Test strings over {a, b} against this DFA.
+  <div class="sim-controls">
+    <input type="text" id="sim-input-1" class="sim-textbox" placeholder="Type test string (e.g. abba) and hit Enter" onkeydown="if(event.key==='Enter') simularPalabra(1)">
+    <button class="btn-run" onclick="simularPalabra(1)">Evaluate</button>
+    <button class="btn-reset" onclick="limpiarSimulador(1)">Reset</button>
+  </div>
+  <div id="sim-log-1" class="sim-display"></div>
+</div>
+
+<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--ink-secondary);margin:24px 0 8px;">DFA Transition Matrix</div>
+<div class="table-box"><table class="matriz"><thead><tr><th class="w-fit"></th><th>State</th><th>a</th><th>b</th></tr></thead>
+<tbody><tr><td class="w-fit"><span class="tag tag-start">start</span></td><td class="cell-mono"><b>{3 5}</b></td><td class="cell-mono">{1 2 4 5}</td><td class="cell-mono">{4}</td></tr><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>{1 2 4 5}</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono">{4 5}</td></tr><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>{4}</b></td><td class="cell-mono cell-empty">∅</td><td class="cell-mono">{5}</td></tr><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>{1 5}</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono">{4}</td></tr><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>{4 5}</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono">{4 5}</td></tr><tr><td class="w-fit"></td><td class="cell-mono"><b>∅</b></td><td class="cell-mono cell-empty">∅</td><td class="cell-mono cell-empty">∅</td></tr><tr><td class="w-fit"></td><td class="cell-mono"><b>{5}</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono">{4}</td></tr></tbody></table></div>
+
+<details style="margin-top:20px;"><summary style="cursor:pointer;color:var(--ink-secondary);font-weight:600;">View Input NFA Matrix</summary>
+<div class="table-box" style="margin-top:8px;"><table class="matriz"><thead><tr><th class="w-fit"></th><th>State</th><th>a</th><th>b</th></tr></thead>
+<tbody><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>1</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono cell-empty">∅</td></tr><tr><td class="w-fit"></td><td class="cell-mono"><b>2</b></td><td class="cell-mono">{1}</td><td class="cell-mono cell-empty">∅</td></tr><tr><td class="w-fit"><span class="tag tag-start">start</span></td><td class="cell-mono"><b>3</b></td><td class="cell-mono">{2 4}</td><td class="cell-mono cell-empty">∅</td></tr><tr><td class="w-fit"><span class="tag tag-final">final</span></td><td class="cell-mono"><b>4</b></td><td class="cell-mono cell-empty">∅</td><td class="cell-mono">{5}</td></tr><tr><td class="w-fit"><span class="tag tag-start">start</span></td><td class="cell-mono"><b>5</b></td><td class="cell-mono">{1 5}</td><td class="cell-mono">{4}</td></tr></tbody></table></div>
+</details>
+</section>
+</main>
+<footer>Generated by conversor_afn_afd.py · Department of Computer Science · Universidad EAFIT</footer>
+
+<script>
+const motor_datos = {"1": {"alfabeto": ["a", "b"], "inicio": "{3 5}", "finales": ["{1 2 4 5}", "{4}", "{4 5}", "{1 5}"], "delta": {"{3 5}": {"a": "{1 2 4 5}", "b": "{4}"}, "{1 2 4 5}": {"a": "{1 5}", "b": "{4 5}"}, "{4}": {"a": "\u2205", "b": "{5}"}, "{1 5}": {"a": "{1 5}", "b": "{4}"}, "{4 5}": {"a": "{1 5}", "b": "{4 5}"}, "\u2205": {"a": "\u2205", "b": "\u2205"}, "{5}": {"a": "{1 5}", "b": "{4}"}}}};
+
+function simularPalabra(cid) {
+    const datos = motor_datos[cid];
+    const txtInput = document.getElementById('sim-input-' + cid);
+    const boxLog = document.getElementById('sim-log-' + cid);
+    const svgEl = document.getElementById('grafo-afd-' + cid);
+
+    if (svgEl) {
+        svgEl.querySelectorAll('.nodo-afd').forEach(n => n.classList.remove('nodo-resaltado'));
+    }
+
+    const w = txtInput.value.trim();
+    let curr = datos.inicio;
+    let recorrido = [];
+
+    for (let i = 0; i < w.length; i++) {
+        const char = w[i];
+        if (!datos.alfabeto.includes(char)) {
+            boxLog.innerHTML = `<span class="verdict-fail">Error: Symbol '<b>${char}</b>' not in alphabet [${datos.alfabeto.join(', ')}]</span>`;
+            return;
+        }
+        const nextState = datos.delta[curr] ? datos.delta[curr][char] : "∅";
+        recorrido.push(`<b>${curr}</b> ──(${char})──> <b>${nextState}</b>`);
+        curr = nextState;
+    }
+
+    const pasa = datos.finales.includes(curr);
+    const badge = pasa
+        ? `<span class="verdict-pass">✓ ACCEPTED (Final state ${curr} ∈ F)</span>`
+        : `<span class="verdict-fail">✗ REJECTED (Final state ${curr} ∉ F)</span>`;
+
+    if (svgEl) {
+        const targetNode = svgEl.querySelector(`[data-state="${curr}"]`);
+        if (targetNode) targetNode.classList.add('nodo-resaltado');
+    }
+
+    const pasosHtml = recorrido.length > 0
+        ? `<div style="margin-top:8px; color:var(--ink-secondary); line-height:1.7;">${recorrido.join(' &nbsp;•&nbsp; ')}</div>`
+        : `<div style="margin-top:8px; color:var(--ink-secondary);">Empty string λ (starts and halts in state ${curr})</div>`;
+
+    boxLog.innerHTML = `<div>${badge}</div>${pasosHtml}`;
+}
+
+function limpiarSimulador(cid) {
+    document.getElementById('sim-input-' + cid).value = '';
+    document.getElementById('sim-log-' + cid).innerHTML = '';
+    const svgEl = document.getElementById('grafo-afd-' + cid);
+    if (svgEl) svgEl.querySelectorAll('.nodo-afd').forEach(n => n.classList.remove('nodo-resaltado'));
+}
+</script>
+
+</body>
+</html>
